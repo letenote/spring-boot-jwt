@@ -7,11 +7,9 @@ import letenote.springbootjwt.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 @Service
-@Transactional
 @Slf4j
 public class UserServiceImpl implements UserService {
 	@Autowired
@@ -52,6 +50,7 @@ public class UserServiceImpl implements UserService {
 		Role role = roleRepository.findRoleByName(roleName).get();
 		log.info(":X: Add new Role {} to User {}", roleName, email);
 		user.getRoles().add(role);
+		userRepository.save(user);
 	}
 
 	@Override
