@@ -21,6 +21,7 @@ import javax.validation.constraints.NotNull;
 @Document(collection = "role")
 public class Role {
 	@Id
+	private String id;
 	@NotNull(message = "name cannot be null")
 	@NotEmpty(message = "name cannot be empty")
 	@NotBlank(message = "name may not be blank")

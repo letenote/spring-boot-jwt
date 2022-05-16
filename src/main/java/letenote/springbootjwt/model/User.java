@@ -23,6 +23,7 @@ import java.util.Collection;
 @Document(collection = "user")
 public class User {
 	@Id
+	private String id;
 	@NotNull(message = "email cannot be null")
 	@NotEmpty(message = "email cannot be empty")
 	@NotBlank(message = "email may not be blank")

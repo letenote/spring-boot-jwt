@@ -6,12 +6,19 @@ import letenote.springbootjwt.repository.RoleRepository;
 import letenote.springbootjwt.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Optional;
 @Service
 @Slf4j
-public class UserServiceImpl implements UserService {
+public class UserServiceImpl implements UserService, UserDetailsService {
 	@Autowired
 	UserRepository userRepository;
 	@Autowired
@@ -54,8 +61,25 @@ public class UserServiceImpl implements UserService {
 	}
 
 	@Override
-	public User getUser(String email) {
-		log.info(":X: Fetching User {}", email);
-		return userRepository.findUserByEmail(email).get();
+	public User getUser(String id) {
+		log.info(":X: Fetching User {}", id);
+		return userRepository.findById(id).get();
+	}
+
+	@Override
+	public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+		Optional<User> user = userRepository.findUserByEmail(email);
+		if(!user.isPresent()){
+			String message = "User not found in database";
+			log.error(message);
+			throw new UsernameNotFoundException(message);
+		}else{
+			log.info("User {} found in database", email);
+		}
+		Collection<SimpleGrantedAuthority> authorities = new ArrayList<>();
+		user.get().getRoles().forEach(role -> {
+			authorities.add(new SimpleGrantedAuthority(role.getName()));
+		});
+		return new org.springframework.security.core.userdetails.User(user.get().getEmail(), user.get().getPassword(), authorities);
 	}
 }

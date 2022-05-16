@@ -12,10 +12,10 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 	@Autowired
 	UserServiceImpl userService;
-	@GetMapping("/users")
-	public ResponseEntity<?> getUser(@RequestBody String email) {
+	@GetMapping("/users/{id}")
+	public ResponseEntity<?> getUser(@PathVariable String id) {
 		try{
-			var getUser = userService.getUser(email);
+			var getUser = userService.getUser(id);
 			return ResponseEntity.status(HttpStatus.OK).body(getUser);
 		} catch (Exception err){
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User Not Found");
