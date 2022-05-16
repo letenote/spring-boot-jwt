@@ -21,7 +21,7 @@ public class UserController {
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User Not Found");
 		}
 	}
-	@PostMapping("/users")
+	@PostMapping("/users/register")
 	public ResponseEntity<?> createUser(@RequestBody User user) {
 		try{
 			User saveUser = userService.saveUser(user);
