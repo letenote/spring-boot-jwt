@@ -10,6 +10,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import java.util.*;
 
@@ -20,7 +21,6 @@ public class UserServiceImpl implements UserService, UserDetailsService {
 	UserRepository userRepository;
 	@Autowired
 	RoleRepository roleRepository;
-
 	@Override
 	public User saveUser(User userRequest) throws Exception {
 		Optional<User> userOptional = userRepository.findUserByEmail(userRequest.getEmail());
@@ -30,12 +30,11 @@ public class UserServiceImpl implements UserService, UserDetailsService {
 			User newUser = new User()
 					.setId(String.format("USER::%S", UUID.randomUUID()))
 					.setEmail(userRequest.getEmail())
-					.setPassword(userRequest.getPassword());
+					.setPassword(new BCryptPasswordEncoder().encode(userRequest.getPassword()));
 			log.info("::Service:: Saving new User {} in to Database..", userRequest.getEmail());
 			return userRepository.save(newUser);
 		}
 	}
-
 	@Override
 	public Role saveRole(Role roleRequest) throws Exception {
 		Optional<Role> roleOptional = roleRepository.findRoleByName(roleRequest.getName());
@@ -49,7 +48,6 @@ public class UserServiceImpl implements UserService, UserDetailsService {
 			return roleRepository.save(newRole);
 		}
 	}
-
 	@Override
 	public void addRoleToUser(String email, String roleName) {
 		User user = userRepository.findUserByEmail(email).get();
@@ -58,27 +56,24 @@ public class UserServiceImpl implements UserService, UserDetailsService {
 		user.getRoles().add(role);
 		userRepository.save(user);
 	}
-
 	@Override
 	public User getUser(String id) {
 		log.info("::Service:: Fetching User {}", id);
 		return userRepository.findById(id).get();
 	}
-
 	@Override
 	public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-		Optional<User> user = userRepository.findUserByEmail(email);
-		if(!user.isPresent()){
-			String message = "User not found in database";
+		User user = userRepository.findUserByEmail(email).get();
+		if(user == null){
+			String message = "::UserDetails:: User not found in database";
 			log.error(message);
 			throw new UsernameNotFoundException(message);
-		}else{
-			log.info("::Service:: User {} found in database", email);
 		}
+		log.info("::UserDetails:: User {} found in database", email);
 		Collection<SimpleGrantedAuthority> authorities = new ArrayList<>();
-		user.get().getRoles().forEach(role -> {
+		user.getRoles().forEach(role -> {
 			authorities.add(new SimpleGrantedAuthority(role.getName()));
 		});
-		return new org.springframework.security.core.userdetails.User(user.get().getEmail(), user.get().getPassword(), authorities);
+		return new org.springframework.security.core.userdetails.User(user.getEmail(), user.getPassword(), authorities);
 	}
 }
