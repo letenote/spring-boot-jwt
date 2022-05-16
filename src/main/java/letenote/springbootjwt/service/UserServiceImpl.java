@@ -11,11 +11,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import java.util.*;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Optional;
 @Service
 @Slf4j
 public class UserServiceImpl implements UserService, UserDetailsService {
@@ -31,9 +28,10 @@ public class UserServiceImpl implements UserService, UserDetailsService {
 			throw new Exception("User Exist");
 		}else{
 			User newUser = new User()
+					.setId(String.format("USER::%S", UUID.randomUUID()))
 					.setEmail(userRequest.getEmail())
 					.setPassword(userRequest.getPassword());
-		log.info(":X: Saving new User {} in to Database..", userRequest.getEmail());
+			log.info("::Service:: Saving new User {} in to Database..", userRequest.getEmail());
 			return userRepository.save(newUser);
 		}
 	}
@@ -45,8 +43,9 @@ public class UserServiceImpl implements UserService, UserDetailsService {
 			throw new Exception("Role Exist");
 		}else{
 			Role newRole = new Role()
+					.setId(String.format("ROLE::%S", UUID.randomUUID()))
 					.setName(roleRequest.getName());
-			log.info(":X: Saving new Role {} in to Database..", roleRequest.getName());
+			log.info("::Service:: Saving new Role {} in to Database..", roleRequest.getName());
 			return roleRepository.save(newRole);
 		}
 	}
@@ -55,14 +54,14 @@ public class UserServiceImpl implements UserService, UserDetailsService {
 	public void addRoleToUser(String email, String roleName) {
 		User user = userRepository.findUserByEmail(email).get();
 		Role role = roleRepository.findRoleByName(roleName).get();
-		log.info(":X: Add new Role {} to User {}", roleName, email);
+		log.info("::Service:: Add new Role {} to User {}", roleName, email);
 		user.getRoles().add(role);
 		userRepository.save(user);
 	}
 
 	@Override
 	public User getUser(String id) {
-		log.info(":X: Fetching User {}", id);
+		log.info("::Service:: Fetching User {}", id);
 		return userRepository.findById(id).get();
 	}
 
@@ -74,7 +73,7 @@ public class UserServiceImpl implements UserService, UserDetailsService {
 			log.error(message);
 			throw new UsernameNotFoundException(message);
 		}else{
-			log.info("User {} found in database", email);
+			log.info("::Service:: User {} found in database", email);
 		}
 		Collection<SimpleGrantedAuthority> authorities = new ArrayList<>();
 		user.get().getRoles().forEach(role -> {
