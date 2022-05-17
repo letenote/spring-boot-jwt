@@ -22,7 +22,7 @@ import java.util.Collection;
 @NoArgsConstructor
 @Accessors(chain = true)
 @Document(collection = "user")
-@JsonFilter("UserFilterProps")
+@JsonFilter("UserPropsFiltering")
 public class User {
 	@Id
 	private String id;

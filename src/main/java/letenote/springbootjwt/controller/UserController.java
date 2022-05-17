@@ -1,9 +1,6 @@
 package letenote.springbootjwt.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ser.FilterProvider;
-import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
-import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
 import letenote.springbootjwt.model.Role;
 import letenote.springbootjwt.model.User;
 import letenote.springbootjwt.service.UserServiceImpl;
@@ -33,17 +30,20 @@ public class UserController {
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User Not Found");
 		}
 	}
+	@GetMapping("/users")
+	public ResponseEntity<?> getUsers() {
+		try{
+			MappingJacksonValue getUsers = userService.findUsers();
+			return ResponseEntity.status(HttpStatus.OK).body(getUsers);
+		} catch (Exception err){
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User Not Found");
+		}
+	}
 	@PostMapping("/users/register")
 	public ResponseEntity<?> createUser(@RequestBody User user) {
 		try{
-			User saveUser = userService.saveUser(user);
-
-			SimpleBeanPropertyFilter filter = SimpleBeanPropertyFilter.filterOutAllExcept("id","email","roles");
-			FilterProvider filters = new SimpleFilterProvider().addFilter("UserFilterProps", filter);
-			MappingJacksonValue mapping = new MappingJacksonValue(saveUser);
-			mapping.setFilters(filters);
-
-			return ResponseEntity.status(HttpStatus.OK).body(mapping);
+			MappingJacksonValue saveUser = userService.saveUser(user);
+			return ResponseEntity.status(HttpStatus.OK).body(saveUser);
 		} catch (Exception err){
 			return ResponseEntity.status(HttpStatus.CONFLICT).body("User Conflict !!!");
 		}
