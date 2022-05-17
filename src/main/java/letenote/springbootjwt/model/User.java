@@ -1,5 +1,6 @@
 package letenote.springbootjwt.model;
 
+import com.fasterxml.jackson.annotation.JsonFilter;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -21,6 +22,7 @@ import java.util.Collection;
 @NoArgsConstructor
 @Accessors(chain = true)
 @Document(collection = "user")
+@JsonFilter("UserFilterProps")
 public class User {
 	@Id
 	private String id;

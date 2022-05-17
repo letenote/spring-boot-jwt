@@ -1,6 +1,9 @@
 package letenote.springbootjwt.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ser.FilterProvider;
+import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
+import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
 import letenote.springbootjwt.model.Role;
 import letenote.springbootjwt.model.User;
 import letenote.springbootjwt.service.UserServiceImpl;
@@ -9,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.json.MappingJacksonValue;
 import org.springframework.web.bind.annotation.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -33,7 +37,13 @@ public class UserController {
 	public ResponseEntity<?> createUser(@RequestBody User user) {
 		try{
 			User saveUser = userService.saveUser(user);
-			return ResponseEntity.status(HttpStatus.OK).body(saveUser);
+
+			SimpleBeanPropertyFilter filter = SimpleBeanPropertyFilter.filterOutAllExcept("id","email","roles");
+			FilterProvider filters = new SimpleFilterProvider().addFilter("UserFilterProps", filter);
+			MappingJacksonValue mapping = new MappingJacksonValue(saveUser);
+			mapping.setFilters(filters);
+
+			return ResponseEntity.status(HttpStatus.OK).body(mapping);
 		} catch (Exception err){
 			return ResponseEntity.status(HttpStatus.CONFLICT).body("User Conflict !!!");
 		}
