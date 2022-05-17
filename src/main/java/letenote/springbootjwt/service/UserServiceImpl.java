@@ -4,12 +4,16 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.JWTVerifier;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
+import com.fasterxml.jackson.databind.ser.FilterProvider;
+import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
+import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
 import letenote.springbootjwt.model.Role;
 import letenote.springbootjwt.model.User;
 import letenote.springbootjwt.repository.RoleRepository;
 import letenote.springbootjwt.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.converter.json.MappingJacksonValue;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -19,7 +23,6 @@ import org.springframework.stereotype.Service;
 import javax.servlet.http.HttpServletRequest;
 import java.util.*;
 import java.util.stream.Collectors;
-
 @Service
 @Slf4j
 public class UserServiceImpl implements UserService, UserDetailsService {
@@ -27,8 +30,22 @@ public class UserServiceImpl implements UserService, UserDetailsService {
 	UserRepository userRepository;
 	@Autowired
 	RoleRepository roleRepository;
+	private MappingJacksonValue mappingUserPropsFiltering(MappingJacksonValue mapper, Set<String> includeProperties){
+		SimpleBeanPropertyFilter filter = SimpleBeanPropertyFilter.filterOutAllExcept(includeProperties);
+		FilterProvider filters = new SimpleFilterProvider().addFilter("UserPropsFiltering", filter);
+		mapper.setFilters(filters);
+		return mapper;
+	}
 	@Override
-	public User saveUser(User userRequest) throws Exception {
+	public MappingJacksonValue findUsers() {
+		var users = userRepository.findAll();
+		return this.mappingUserPropsFiltering(
+				new MappingJacksonValue(users),
+				Set.of("id","email","roles")
+		);
+	}
+	@Override
+	public MappingJacksonValue saveUser(User userRequest) throws Exception {
 		Optional<User> userOptional = userRepository.findUserByEmail(userRequest.getEmail());
 		if(userOptional.isPresent()){
 			throw new Exception("User Exist");
@@ -38,7 +55,11 @@ public class UserServiceImpl implements UserService, UserDetailsService {
 					.setEmail(userRequest.getEmail())
 					.setPassword(new BCryptPasswordEncoder().encode(userRequest.getPassword()));
 			log.info("::Service:: Saving new User {} in to Database..", userRequest.getEmail());
-			return userRepository.save(newUser);
+			var userSaved = userRepository.save(newUser);
+			return this.mappingUserPropsFiltering(
+					new MappingJacksonValue(userSaved),
+					Set.of("id","email","roles")
+			);
 		}
 	}
 	@Override
@@ -63,14 +84,13 @@ public class UserServiceImpl implements UserService, UserDetailsService {
 		userRepository.save(user);
 	}
 	@Override
-	public User getUserById(String id) {
+	public MappingJacksonValue getUserById(String id) {
 		log.info("::Service:: Fetching User {}", id);
-		return userRepository.findById(id).get();
-	}
-	@Override
-	public User getUserByEmail(String email) {
-		log.info("::Service:: Fetching User {}", email);
-		return userRepository.findUserByEmail(email).get();
+		var getUser = userRepository.findById(id).get();
+		return this.mappingUserPropsFiltering(
+				new MappingJacksonValue(getUser),
+				Set.of("id","email","roles")
+		);
 	}
 	@Override
 	public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
@@ -79,13 +99,14 @@ public class UserServiceImpl implements UserService, UserDetailsService {
 			String message = "::UserDetails:: User not found in database";
 			log.error(message);
 			throw new UsernameNotFoundException(message);
+		} else {
+			log.info("::UserDetails:: User {} found in database", email);
+			Collection<SimpleGrantedAuthority> authorities = new ArrayList<>();
+			user.getRoles().forEach(role -> {
+				authorities.add(new SimpleGrantedAuthority(role.getName()));
+			});
+			return new org.springframework.security.core.userdetails.User(user.getEmail(), user.getPassword(), authorities);
 		}
-		log.info("::UserDetails:: User {} found in database", email);
-		Collection<SimpleGrantedAuthority> authorities = new ArrayList<>();
-		user.getRoles().forEach(role -> {
-			authorities.add(new SimpleGrantedAuthority(role.getName()));
-		});
-		return new org.springframework.security.core.userdetails.User(user.getEmail(), user.getPassword(), authorities);
 	}
 	@Override
 	public Map<String, String> renewToken(HttpServletRequest request) {
@@ -97,7 +118,7 @@ public class UserServiceImpl implements UserService, UserDetailsService {
 				DecodedJWT decodedJWT = verifier.verify(getRefreshToken);
 				String email = decodedJWT.getSubject();
 
-				User user = getUserByEmail(email);
+				User user = userRepository.findUserByEmail(email).get();
 
 				String newAccessToken = JWT.create()
 						.withSubject(user.getEmail())

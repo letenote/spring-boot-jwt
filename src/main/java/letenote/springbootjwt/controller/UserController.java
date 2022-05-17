@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.json.MappingJacksonValue;
 import org.springframework.web.bind.annotation.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -29,10 +30,19 @@ public class UserController {
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User Not Found");
 		}
 	}
+	@GetMapping("/users")
+	public ResponseEntity<?> getUsers() {
+		try{
+			MappingJacksonValue getUsers = userService.findUsers();
+			return ResponseEntity.status(HttpStatus.OK).body(getUsers);
+		} catch (Exception err){
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User Not Found");
+		}
+	}
 	@PostMapping("/users/register")
 	public ResponseEntity<?> createUser(@RequestBody User user) {
 		try{
-			User saveUser = userService.saveUser(user);
+			MappingJacksonValue saveUser = userService.saveUser(user);
 			return ResponseEntity.status(HttpStatus.OK).body(saveUser);
 		} catch (Exception err){
 			return ResponseEntity.status(HttpStatus.CONFLICT).body("User Conflict !!!");
