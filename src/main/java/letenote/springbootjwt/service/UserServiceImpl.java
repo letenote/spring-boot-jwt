@@ -1,5 +1,9 @@
 package letenote.springbootjwt.service;
 
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.JWTVerifier;
+import com.auth0.jwt.algorithms.Algorithm;
+import com.auth0.jwt.interfaces.DecodedJWT;
 import letenote.springbootjwt.model.Role;
 import letenote.springbootjwt.model.User;
 import letenote.springbootjwt.repository.RoleRepository;
@@ -12,7 +16,9 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import javax.servlet.http.HttpServletRequest;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -57,9 +63,14 @@ public class UserServiceImpl implements UserService, UserDetailsService {
 		userRepository.save(user);
 	}
 	@Override
-	public User getUser(String id) {
+	public User getUserById(String id) {
 		log.info("::Service:: Fetching User {}", id);
 		return userRepository.findById(id).get();
+	}
+	@Override
+	public User getUserByEmail(String email) {
+		log.info("::Service:: Fetching User {}", email);
+		return userRepository.findUserByEmail(email).get();
 	}
 	@Override
 	public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
@@ -75,5 +86,35 @@ public class UserServiceImpl implements UserService, UserDetailsService {
 			authorities.add(new SimpleGrantedAuthority(role.getName()));
 		});
 		return new org.springframework.security.core.userdetails.User(user.getEmail(), user.getPassword(), authorities);
+	}
+	@Override
+	public Map<String, String> renewToken(HttpServletRequest request) {
+		String getRefreshToken = request.getHeader("Refresh-Token");
+		if( getRefreshToken != null ) {
+			try {
+				Algorithm algorithm = Algorithm.HMAC256("secret".getBytes());
+				JWTVerifier verifier = JWT.require(algorithm).build();
+				DecodedJWT decodedJWT = verifier.verify(getRefreshToken);
+				String email = decodedJWT.getSubject();
+
+				User user = getUserByEmail(email);
+
+				String newAccessToken = JWT.create()
+						.withSubject(user.getEmail())
+						.withExpiresAt(new Date(System.currentTimeMillis() + 10 * 60 * 1000))
+						.withIssuer(request.getRequestURL().toString())
+						.withClaim("roles", user.getRoles().stream().map(Role::getName).collect(Collectors.toList()))
+						.sign(algorithm);
+
+				Map<String, String> tokens = new HashMap<>();
+				tokens.put("access_token", newAccessToken);
+				tokens.put("refresh_token", getRefreshToken);
+				return tokens;
+			}catch (Exception err) {
+				throw new RuntimeException(err.getMessage());
+			}
+		}else{
+			throw new RuntimeException("Refresh token is missing !!!");
+		}
 	}
 }
